@@ -180,6 +180,7 @@ return [
         'trace' => true,
         'ignoredDeprecationPaths' => [],
         'traceFormat' => null,
+        'exceptionRenderer' => \App\Error\AppExceptionRenderer::class,
     ],
 
     /*

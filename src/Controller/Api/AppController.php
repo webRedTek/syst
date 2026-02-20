@@ -12,7 +12,7 @@ class AppController extends Controller
     {
         parent::initialize();
 
-        // Force JSON for all /api controllers (CakePHP 5 data view)
+        // Force JSON for all /api controllers
         $this->viewBuilder()->setClassName(JsonView::class);
     }
 }

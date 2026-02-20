@@ -18,6 +18,7 @@ namespace App;
 
 use App\Middleware\HostHeaderMiddleware;
 use Cake\Core\Configure;
+use App\Middleware\HmacAuthMiddleware;
 use Cake\Core\ContainerInterface;
 use Cake\Datasource\FactoryLocator;
 use Cake\Error\Middleware\ErrorHandlerMiddleware;
@@ -61,32 +62,37 @@ class Application extends BaseApplication
      * @param \Cake\Http\MiddlewareQueue $middlewareQueue The middleware queue to setup.
      * @return \Cake\Http\MiddlewareQueue The updated middleware queue.
      */
-    public function middleware(MiddlewareQueue $middlewareQueue): MiddlewareQueue
-{
-    $middlewareQueue
-        ->add(new ErrorHandlerMiddleware(Configure::read('Error'), $this))
-        ->add(new HostHeaderMiddleware())
-        ->add(new AssetMiddleware([
-            'cacheTime' => Configure::read('Asset.cacheTime'),
-        ]))
-        ->add(new \App\Middleware\HmacAuthMiddleware((string)env('MCONTROL_HMAC_SECRET', 'CHANGE_ME_DEV_ONLY')))
-        ->add(new RoutingMiddleware($this))
-        ->add(new BodyParserMiddleware());
+  public function middleware(MiddlewareQueue $middlewareQueue): MiddlewareQueue
+    {
+        $middlewareQueue
+            ->add(new ErrorHandlerMiddleware(Configure::read('Error'), $this))
+            ->add(new HostHeaderMiddleware())
+            ->add(new AssetMiddleware([
+                'cacheTime' => Configure::read('Asset.cacheTime'),
+            ]));
 
-    // CSRF is for browser forms/sessions. Skip it for stateless /api/*
-    $csrf = new CsrfProtectionMiddleware([
-        'httponly' => true,
-    ]);
+        // 🔐 HMAC MUST be before RoutingMiddleware
+        $secret = (string)env('MCONTROL_HMAC_SECRET', '');
+        if ($secret === '') {
+            $secret = '__MISSING__';
+        }
+        $middlewareQueue->add(new \App\Middleware\HmacAuthMiddleware($secret));
+        $middlewareQueue->add(new HmacAuthMiddleware($secret));
 
-    $csrf->skipCheckCallback(function ($request): bool {
-        $path = $request->getUri()->getPath();
-        return str_starts_with($path, '/api/');
-    });
+        $middlewareQueue
+            ->add(new RoutingMiddleware($this))
+            ->add(new BodyParserMiddleware());
 
-    $middlewareQueue->add($csrf);
+        // CSRF is for browser forms/sessions; skip for stateless /api/*
+        $csrf = new CsrfProtectionMiddleware(['httponly' => true]);
+        $csrf->skipCheckCallback(function ($request): bool {
+            $path = $request->getUri()->getPath();
+            return str_starts_with($path, '/api/');
+        });
+        $middlewareQueue->add($csrf);
 
-    return $middlewareQueue;
-}
+        return $middlewareQueue;
+    }
 
 
     /**
