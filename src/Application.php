@@ -54,6 +54,7 @@ class Application extends BaseApplication
         FactoryLocator::add('Table', (new TableLocator())->allowFallbackClass(false));
     }
 
+
     /**
      * Setup the middleware queue your application will use.
      *
@@ -68,6 +69,7 @@ class Application extends BaseApplication
         ->add(new AssetMiddleware([
             'cacheTime' => Configure::read('Asset.cacheTime'),
         ]))
+        ->add(new \App\Middleware\HmacAuthMiddleware((string)env('MCONTROL_HMAC_SECRET', 'CHANGE_ME_DEV_ONLY')))
         ->add(new RoutingMiddleware($this))
         ->add(new BodyParserMiddleware());
 
