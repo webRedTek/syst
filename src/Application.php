@@ -72,11 +72,11 @@ class Application extends BaseApplication
             ]));
 
         // 🔐 HMAC MUST be before RoutingMiddleware
-        $secret = (string)env('MCONTROL_HMAC_SECRET', '');
+        $secret = (string)Configure::read('MControl.hmacSecret', '');
         if ($secret === '') {
             $secret = '__MISSING__';
         }
-        $middlewareQueue->add(new \App\Middleware\HmacAuthMiddleware($secret));
+    
         $middlewareQueue->add(new HmacAuthMiddleware($secret));
 
         $middlewareQueue
